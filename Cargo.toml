@@ -1,0 +1,9 @@
+[package]
+name = "pluginrepo-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rocket = "0.5.0-rc.2"
+serde_json = "1.0"
+log = "0.4"
