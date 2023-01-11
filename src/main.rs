@@ -10,10 +10,16 @@ mod verification;
 fn rocket() -> _ {
     rocket::build().mount("/", routes![
         root,
+        webhook,
     ])
 }
 
 #[get("/")]
 fn root() -> &'static str {
     "read if cute"
+}
+
+#[post("/github", data = "<payload>")]
+fn webhook(event: GitHubEvent, payload: i32) -> &'static str {
+    "Hello, world!"
 }
