@@ -11,10 +11,11 @@ pub enum GitHubEvent {
 	Create,
 }
 
-impl<'r, 'a> FromRequest<'r, > for GitHubEvent {
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for GitHubEvent {
 	type Error = ();
 
-	fn from_request(request: &'r Request<'_>) -> Outcome<GitHubEvent, ()> {
+	async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
 		let keys = request.headers().get(X_GITHUB_EVENT).collect::<Vec<_>>();
 		if keys.len() != 1 {
 			return Outcome::Failure((Status::BadRequest, ()));
