@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate rocket;
 
-use std::future::Future;
 
 use log::info;
 use rocket::http::Status;
@@ -12,6 +11,7 @@ use crate::verification::SignedPayload;
 
 mod event;
 mod verification;
+mod workflow;
 
 #[launch]
 fn rocket() -> _ {
@@ -30,7 +30,6 @@ fn root() -> &'static str {
 async fn webhook(event: GitHubEvent, payload: SignedPayload) -> Status {
 	let handler = match event {
 		GitHubEvent::Push => handle_push(payload.0).await,
-		GitHubEvent::Create => handle_create(payload.0).await,
 		GitHubEvent::Ping => handle_ping().await,
 	};
 
@@ -46,7 +45,7 @@ async fn handle_ping() -> Result<(), ()> {
 }
 
 #[derive(Debug, Deserialize)]
-struct Repository {
+pub struct Repository {
 	owner: String,
 	repo: String,
 }
@@ -65,20 +64,13 @@ async fn handle_push(body: String) -> Result<(), ()> {
 		Err(_) => { return Err(()); }
 	};
 
-	return Ok(());
-}
+	// Check for valid release branch
+	if data.ref_ != "refs/heads/release" || data.deleted {
+		return Ok(());
+	}
 
-// #[derive(Debug, Deserialize)]
-// struct CreateEventData {
-// 	#[serde(rename = "ref")]
-// 	ref_: String,
-// }
-//
-// async fn handle_create(body: String) -> Result<(), ()> {
-// 	let data = match serde_json::from_str::<CreateEventData>(body.as_str()) {
-// 		Ok(d) => d,
-// 		Err(_) => { return Err(()); }
-// 	};
-//
-// 	return Ok(());
-// }
+	match workflow::trigger_build(data.repository).await {
+		Ok(_) => Ok(()),
+		Err(_) => Err(()),
+	}
+}

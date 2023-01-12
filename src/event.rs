@@ -8,7 +8,6 @@ const X_GITHUB_EVENT: &str = "X-GitHub-Event";
 pub enum GitHubEvent {
 	Ping,
 	Push,
-	Create,
 }
 
 #[rocket::async_trait]
@@ -24,7 +23,6 @@ impl<'r> FromRequest<'r> for GitHubEvent {
 		let event = match keys[0] {
 			"ping" => GitHubEvent::Ping,
 			"push" => GitHubEvent::Push,
-			"create" => GitHubEvent::Create,
 			_ => { return Outcome::Failure((Status::Ok, ())); }
 		};
 		Outcome::Success(event)

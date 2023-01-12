@@ -2,8 +2,8 @@ use crypto::hmac::Hmac;
 use crypto::mac::Mac;
 use crypto::sha1::Sha1;
 use data::Outcome;
-use rocket::data::{FromData, ToByteUnit};
 use rocket::{Data, data, Request};
+use rocket::data::{FromData, ToByteUnit};
 use rocket::http::Status;
 use rocket::tokio::io::AsyncReadExt;
 
@@ -35,7 +35,7 @@ impl<'r> FromData<'r> for SignedPayload {
 			return Outcome::Failure((Status::InternalServerError, ()));
 		}
 
-		let secret = match std::env::var("GITHUB_WEBHOOK_SECRET") {
+		let secret = match std::env::var("WEBHOOK_SECRET") {
 			Ok(s) => s,
 			Err(_) => { return Outcome::Failure((Status::InternalServerError, ())); }
 		};
