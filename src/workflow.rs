@@ -1,7 +1,7 @@
 use std::env;
 
 use lazy_static::lazy_static;
-use reqwest::{Client, Request};
+use reqwest::Client;
 use serde_derive::Serialize;
 
 use crate::Repository;
