@@ -1,6 +1,7 @@
 use std::env;
 
 use lazy_static::lazy_static;
+use log::error;
 use reqwest::Client;
 use serde_derive::Serialize;
 
@@ -33,6 +34,7 @@ pub async fn trigger_build(target_repo: Repository) -> Result<(), ()> {
 		.header("Authorization", format!("token {}", TOKEN.to_string()))
 		.header("Content-Type", "application/json")
 		.header("Accept", "application/vnd.github.v3+json")
+		.header("User-Agent", "Aliucord/plugins-webhook")
 		.json(&DispatchWorkflow {
 			ref_: "main".to_string(),
 			inputs: WorkflowInputs {
@@ -43,9 +45,17 @@ pub async fn trigger_build(target_repo: Repository) -> Result<(), ()> {
 		.send().await;
 
 	match req {
+		Ok(res) if res.status() != 200 => {
+			error!(
+				"Failed to trigger build on plugins repo for {}: {:?}",
+				target_repo.full_name,
+				res.text().await.unwrap_or("<failed to get body>".to_string())
+			);
+			Err(())
+		},
 		Ok(_) => Ok(()),
 		Err(e) => {
-			log::error!("Failed to trigger build for {:?}: {:?}", target_repo, e);
+			error!("Failed to trigger build on plugins repo for {}: {:?}", target_repo.full_name, e);
 			Err(())
 		}
 	}
