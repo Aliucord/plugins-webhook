@@ -4,6 +4,7 @@ extern crate rocket;
 
 use log::info;
 use rocket::http::Status;
+use rocket::Request;
 use serde_derive::Deserialize;
 
 use crate::event::GitHubEvent;
@@ -15,10 +16,19 @@ mod workflow;
 
 #[launch]
 fn rocket() -> _ {
-	rocket::build().mount("/", routes![
-		root,
-		webhook,
-	])
+	rocket::build()
+		.mount("/", routes![
+			root,
+			webhook,
+		])
+		.register("/", catchers![
+			catcher_default,
+		])
+}
+
+#[catch(default)]
+fn catcher_default(_: Status, _: &Request<'_>) -> &'static str {
+	"Unknown Error"
 }
 
 #[get("/")]
