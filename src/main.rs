@@ -56,13 +56,17 @@ async fn handle_ping() -> Result<(), ()> {
 
 #[derive(Debug, Deserialize)]
 pub struct User {
-	id: i32,
+	login: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Repository {
+	id: i32,
+	name: String,
 	owner: User,
-	full_name: String, // ex. octocat/Hello-World
+	private: bool,
+	disabled: bool,
+	archived: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -80,11 +84,16 @@ async fn handle_push(body: String) -> Result<(), ()> {
 	};
 
 	// Check for valid release branch
-	if data.ref_ != "refs/heads/release" || data.deleted {
+	if data.ref_ != "refs/heads/release"
+		|| data.deleted
+		|| data.repository.archived
+		|| data.repository.private
+		|| data.repository.disabled
+	{
 		return Ok(());
 	}
 
-	info!("Received release branch push on {}", data.repository.full_name);
+	info!("Received release branch push on {}/{}", &data.repository.owner.login, &data.repository.name);
 
 	match workflow::trigger_build(data.repository).await {
 		Ok(_) => Ok(()),

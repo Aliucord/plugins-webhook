@@ -11,7 +11,7 @@ lazy_static! {
 	static ref HTTP: Client = Client::new();
 	static ref TOKEN: String = env::var("PLUGINS_REPO_TOKEN").expect("no PLUGINS_REPO_TOKEN env");
 	static ref URL: String = format!(
-		"https://api.github.com/repos/{}/actions/workflows/build-plugin.yml/dispatches",
+		"https://api.github.com/repos/{}/actions/workflows/plugin-update.yml/dispatches",
 		env::var("PLUGINS_REPO").expect("no PLUGINS_REPO env"),
 	);
 }
@@ -25,8 +25,9 @@ struct DispatchWorkflow {
 
 #[derive(Debug, Serialize)]
 struct WorkflowInputs {
-	owner_id: i32,
-	repo_full_name: String,
+	repo_id: i32,
+	repo_owner: String,
+	repo_name: String
 }
 
 pub async fn trigger_build(target_repo: Repository) -> Result<(), ()> {
@@ -38,8 +39,9 @@ pub async fn trigger_build(target_repo: Repository) -> Result<(), ()> {
 		.json(&DispatchWorkflow {
 			ref_: "main".to_string(),
 			inputs: WorkflowInputs {
-				repo_full_name: target_repo.full_name.clone(),
-				owner_id: target_repo.owner.id,
+				repo_id: target_repo.id,
+				repo_owner: target_repo.owner.login.clone(),
+				repo_name: target_repo.name.clone(),
 			},
 		})
 		.send().await;
@@ -47,15 +49,16 @@ pub async fn trigger_build(target_repo: Repository) -> Result<(), ()> {
 	match req {
 		Ok(res) if res.status() != 200 => {
 			error!(
-				"Failed to trigger build on plugins repo for {}: {:?}",
-				target_repo.full_name,
+				"Failed to trigger build on plugins repo for {}/{}: {:?}",
+				target_repo.owner.login, target_repo.name,
 				res.text().await.unwrap_or("<failed to get body>".to_string())
 			);
 			Err(())
 		},
 		Ok(_) => Ok(()),
 		Err(e) => {
-			error!("Failed to trigger build on plugins repo for {}: {:?}", target_repo.full_name, e);
+			error!("Failed to trigger build on plugins repo for {}/{}: {:?}",
+				target_repo.owner.login, target_repo.name, e);
 			Err(())
 		}
 	}
