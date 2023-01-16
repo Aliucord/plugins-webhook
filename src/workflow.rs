@@ -25,7 +25,7 @@ struct DispatchWorkflow {
 
 #[derive(Debug, Serialize)]
 struct WorkflowInputs {
-	repo_id: i32,
+	repo_id: String,
 	repo_owner: String,
 	repo_name: String
 }
@@ -39,7 +39,7 @@ pub async fn trigger_build(target_repo: Repository) -> Result<(), ()> {
 		.json(&DispatchWorkflow {
 			ref_: "main".to_string(),
 			inputs: WorkflowInputs {
-				repo_id: target_repo.id,
+				repo_id: target_repo.id.to_string(),
 				repo_owner: target_repo.owner.login.clone(),
 				repo_name: target_repo.name.clone(),
 			},
