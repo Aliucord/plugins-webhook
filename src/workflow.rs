@@ -47,11 +47,12 @@ pub async fn trigger_build(target_repo: Repository) -> Result<(), ()> {
 		.send().await;
 
 	match req {
-		Ok(res) if res.status() != 200 => {
+		Ok(res) if !(200..=300).contains(&res.status().as_u16()) => {
 			error!(
-				"Failed to trigger build on plugins repo for {}/{}: {:?}",
+				"Failed to trigger build on plugins repo for {}/{}: {} {:?}",
 				target_repo.owner.login, target_repo.name,
-				res.text().await.unwrap_or("<failed to get body>".to_string())
+				res.status().as_u16(),
+				res.text().await.unwrap_or("<failed to get body>".to_string()),
 			);
 			Err(())
 		},
