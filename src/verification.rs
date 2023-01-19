@@ -1,14 +1,14 @@
 use std::env;
 
-use crypto::hmac::Hmac;
-use crypto::mac::Mac;
-use crypto::sha2::Sha256;
+use constant_time_eq::constant_time_eq;
 use data::Outcome;
+use hmac::{Hmac, Mac};
 use lazy_static::lazy_static;
 use rocket::{Data, data, Request};
 use rocket::data::{FromData, ToByteUnit};
 use rocket::http::Status;
 use rocket::tokio::io::AsyncReadExt;
+use sha2::Sha256;
 
 lazy_static! {
 	static ref SECRET: String = env::var("WEBHOOK_SECRET").expect("no WEBHOOK_SECRET env");
@@ -49,12 +49,19 @@ impl<'r> FromData<'r> for SignedPayload {
 }
 
 fn is_valid_signature_256(signature: &str, body: &str, secret: &str) -> bool {
-	let mut hmac = Hmac::new(Sha256::new(), secret.as_bytes());
-	hmac.input(body.as_bytes());
+	if !signature.starts_with("sha256=") {
+		return false;
+	}
 
-	let calculated_sig = format!("sha256={}", bytes_to_hex(hmac.result().code()));
+	let mut hmac = Hmac::<Sha256>::new_from_slice(secret.as_bytes())
+		.expect("failed to parse hmac secret");
 
-	crypto::util::fixed_time_eq(calculated_sig.as_bytes(), signature.as_bytes())
+	hmac.update(body.as_bytes());
+
+	let calculated = bytes_to_hex(&hmac.finalize().into_bytes());
+	let provided = &signature["sha256=".len()..];
+
+	constant_time_eq(calculated.as_bytes(), provided.as_bytes())
 }
 
 fn bytes_to_hex(bytes: &[u8]) -> String {
