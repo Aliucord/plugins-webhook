@@ -3,8 +3,9 @@ extern crate rocket;
 
 
 use log::info;
+use rocket::{Config, Request};
+use rocket::fairing::AdHoc;
 use rocket::http::Status;
-use rocket::Request;
 use serde_derive::Deserialize;
 
 use crate::event::GitHubEvent;
@@ -16,7 +17,15 @@ mod workflow;
 
 #[launch]
 fn rocket() -> _ {
-	rocket::build()
+	let figment = Config::figment()
+		.merge(("port", 80))
+		.merge(("ident", false))
+		.merge(("address", "0.0.0.0"));
+
+	#[cfg(not(debug_assertions))]
+		let figment = figment.merge(("log_level", "critical"));
+
+	rocket::custom(figment)
 		.mount("/", routes![
 			root,
 			webhook,
@@ -24,6 +33,9 @@ fn rocket() -> _ {
 		.register("/", catchers![
 			catcher_default,
 		])
+		.attach(AdHoc::on_liftoff("Liftoff log", |_| Box::pin(async move {
+			println!("Launched TimezoneDB!");
+		})))
 }
 
 #[catch(default)]
